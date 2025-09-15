@@ -4,6 +4,8 @@ Live preview:
 
 https://n0ch0w-3k.myshopify.com/collections/all
 
+> **Note:** Please click on the ```Enter using a password``` at the bottom of the page
+
 Password: ```aimohp```
 
 ## Installation
@@ -44,7 +46,7 @@ Password: ```aimohp```
 {% endschema %}
 ```
 
-> **Note:** that in the schema I have used a variable from the locales for correct multilanguage names. If you don't want that, you can hard code the name directly. *You must create a name for this section E.g. "Frenzy AI Product Filter"
+> **Note:** In the schema I have used a variable from the locales for correct multilanguage names. If you don't want that, you can hard code the name directly. *You must create a name for this section E.g. "Frenzy AI Product Filter"
 
 
 5. Now go onto your collections page and add the section with the name you assigned it
@@ -66,4 +68,5 @@ Only queries for a set number of products (20) configured by the PAGE_SIZE varia
 It includes a query in the graphQL query to get the currency symbol for the product card. It uses the correct currency and currency symbol for international stores
 
 Images are optimized by shopify's backend, and the browser takes care of selecting the right image based on the user's device using the srcset attribute
+
 
