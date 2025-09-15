@@ -1,5 +1,11 @@
 # Frenzy AI Product Filter
 
+Live preview:
+
+https://n0ch0w-3k.myshopify.com/collections/all
+
+Password: ```aimohp```
+
 ## Installation
 
 1. Run the ```npm run build command```
@@ -60,3 +66,4 @@ Only queries for a set number of products (20) configured by the PAGE_SIZE varia
 It includes a query in the graphQL query to get the currency symbol for the product card. It uses the correct currency and currency symbol for international stores
 
 Images are optimized by shopify's backend, and the browser takes care of selecting the right image based on the user's device using the srcset attribute
+
