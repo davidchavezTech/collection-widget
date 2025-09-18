@@ -9,6 +9,12 @@ export default defineConfig({
         outDir: "dist",
         rollupOptions: {
           output: {
+            assetFileNames: (assetInfo) => {
+                if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+                  return 'frenzy-ai-widget.css'  // 👈 your custom name
+                }
+                return '[name][extname]'
+            },
             entryFileNames: "frenzy-ai-widget.js",
           },
         },
