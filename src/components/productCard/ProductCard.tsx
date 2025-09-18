@@ -57,11 +57,17 @@ const ProductCard = ({ product, availableCurrencySymbols }: { product: Product, 
                     {vendor || <div className="tw:h-3 tw:w-1/3 tw:mx-auto tw:bg-stone-300 tw:rounded tw:mb-1" />}
                 </h3>
                 <h3 className="tw:text-sm tw:text-stone-800 tw:mb-1">{title || <div className="tw:h-4 tw:w-2/3 tw:mx-auto tw:bg-stone-300 tw:rounded" />}</h3>
-                <p className="tw:text-sm tw:text-stone-700">
-                    {!currencySymbol && !price ? <div className="tw:h-3 tw:w-1/4 tw:mx-auto tw:bg-stone-300 tw:rounded" /> : ''}
-                    {currencySymbol}
-                    {price}
-                </p>
+                {
+                    !currencySymbol && !price
+                        ? <div className="tw:h-3 tw:w-1/4 tw:mx-auto tw:bg-stone-300 tw:rounded" />
+                    : (
+                        <p className="tw:text-sm tw:text-stone-700">
+                            {currencySymbol}
+                            {price}
+                        </p>
+                    )
+                }
+                
             </div>
         </a>
     );
