@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { graphQLProductRequest } from "../../api/shopify";
 import type {
     Product,
@@ -6,36 +6,169 @@ import type {
     ProductsResponse,
     SortBy,
     CurrencySymbolObject,
-    FilterList
+    Filter,
+    Filters,
+    FiltersAction
 } from "../../types/shopify";
 import { PRODUCTS_QUERY } from "../../graphQL/queries/products";
 
 const PAGE_SIZE = 20;
 const SCROLL_FETCH_THRESHOLD = 300;
 
+const SAMPLE_VENDORS_DATA = {
+    "Barbour x Tuckernuck": false,
+    "Hyacinth House": false,
+    "MOTHER": false,
+    "Tuckernuck": false
+};
+
+const SAMPLE_PRODUCT_TYPE_DATA = {
+    "cardigans": false,
+    "Dresses": false,
+    "Rain Umbrellas": false,
+    "shawls": false,
+    "shoes": false
+};
+
+const FILTERS_LIST: Filters = {  //Keys must match the variable name from the JSON initialization data in the liquid file
+    vendors: {
+        filterName: "Brands",
+        graphQLId: 'vendor',
+        state: import.meta.env.MODE === "development" ? SAMPLE_VENDORS_DATA : {}, // We need hard coded values for development since we can't rely on shopify's data
+    },
+    productTypes: {
+        filterName: "Product Type",
+        graphQLId: 'product_type',
+        state: import.meta.env.MODE === "development" ? SAMPLE_PRODUCT_TYPE_DATA : {}, // We need hard coded values for development since we can't rely on shopify's data
+    }
+}
+
+const initiateFiltersList = (initialArgs: Filters | undefined): Filters => {
+    if(!initialArgs) return {};
+    try {
+        const isDevMode = import.meta.env.MODE === 'development';
+        if(isDevMode) return initialArgs;
+    
+        const scriptElement = document.getElementById('frenzy-data') as HTMLScriptElement;
+    
+        const extractDataFromScriptElement = (scriptElement: HTMLScriptElement): Record<string, string[]> => {
+            const isJSON = (string: string): boolean => {
+                try {
+                    if(JSON.parse(string)) return true;
+                    else return false;
+                } catch {
+                    return false;
+                }
+            };
+            
+            if(!scriptElement.textContent) return {};
+            if(!isJSON(scriptElement.textContent)) return {};
+    
+            return JSON.parse(scriptElement.textContent);
+        };
+    
+        if(scriptElement) {
+            const shopifyFiltersObj: Record<string, string[]> = extractDataFromScriptElement(scriptElement);
+    
+            // Assign state to each filter from initialArgs
+            const updatedFilters: Filters = Object.fromEntries(
+                Object.entries(shopifyFiltersObj).map(([key, filterValuesList]) => {
+                    const newState: Record<string, boolean> = Object.fromEntries(
+                        filterValuesList.map(value => [value, false])
+                    );
+                    const currentFilter = initialArgs[key] ?? {};
+    
+                    if (!currentFilter) {
+                        throw new Error(`Missing filter config for key: ${key}`);
+                    };
+    
+                    return [
+                        key, 
+                        {
+                            ...currentFilter,
+                            state: newState
+                        }
+                    ];
+                })
+            );
+    
+            return updatedFilters;
+    
+        } else return {};
+    } catch {
+        return {};
+    }
+};
+
+function toggleFilter(filter: Filter, key: string): Filter {
+    return {
+        ...filter,
+        state: {
+            ...filter.state,
+            [key]: !filter.state[key],
+        },
+    };
+}
+
+const filtersListReducer = (prevState: Filters, action: FiltersAction) => {
+    const { type, payload } = action;
+
+    switch (type) {
+        case "TOGGLE_FILTER": {
+            if(!payload) return prevState;
+            const filter = prevState[payload.filterName];
+            if (!filter) return prevState;
+
+            return {
+                ...prevState,
+                [payload.filterName]: toggleFilter(filter, payload.key),
+            };
+        };
+        case "CLEAR_FILTER": {
+            const cleared = Object.fromEntries(
+                Object.entries(prevState).map(([filterName, filter]) => [
+                    filterName,
+                    {
+                        ...filter,
+                        state: Object.fromEntries(
+                            Object.keys(filter.state).map((key) => [key, false])
+                        ),
+                    },
+                ])
+            ) as Filters;
+                
+            return cleared;
+        }
+        default:
+            return prevState;
+    }
+}
+
 const useWidget = () => {
-    const [ products, setProducts ] = useState<Product[]>([]);
+    const [ products, setProducts ] = useState<Product[]>(Array.from({length: PAGE_SIZE}).map((_, index) => ({
+        id: `dummy-product-${index}`,
+        title: '',
+        handle: `dummy-handle`,
+        vendor: '',
+        images: {
+            edges: []
+        },
+        variants: {
+            edges: [{
+                node: {
+                    priceV2: {
+                        amount: "",
+                        currencyCode: ""
+                    }
+                }
+            }]
+        }
+    })));
     const [ loading, setLoading ] = useState(true);
     const [ loadingMoreProducts, setLoadingLoadingMoreProducts ] = useState(false);
     const [ cursor, setCursor ] = useState<string | null>(null);
     const [ hasNextPage, setHasNextPage ] = useState(true);
-    const [ selectedBrands, setSelectedBrands ] = useState<Record<string, boolean>>(
-            import.meta.env.MODE === "development" ? {
-            "Barbour x Tuckernuck": false,
-            "Hyacinth House": false,
-            "MOTHER": false,
-            "Tuckernuck": false
-        } : {}
-    );
-    const [ selectedProductTypes, setSelectedProductTypes ] = useState<Record<string, boolean>>(
-        import.meta.env.MODE === "development" ? {
-            "cardigans": false,
-            "Dresses": false,
-            "Rain Umbrellas": false,
-            "shawls": false,
-            "shoes": false
-        } : {}
-    );
+    const [ filters, dispatch ] = useReducer(filtersListReducer, FILTERS_LIST, initiateFiltersList);
     const [ sortBy, setSortBy ] = useState<SortBy>();
     const [ reverse, setReverse ] = useState(false);
     const [ availableCurrencySymbols, setAvailableCurrencySymbols ] = useState<CurrencySymbolObject[]>([]);
@@ -44,29 +177,13 @@ const useWidget = () => {
     const abortController = useRef<AbortController | null>(null);
     const initialllyLoadedRef = useRef(false);
 
-    const filtersList: FilterList[] = useMemo(() => [
-        {
-            id: "vendors",
-            name: "Brands",
-            queryId: 'vendor',
-            state: selectedBrands,
-            stateSetter: setSelectedBrands
-        },
-        {
-            id: "productTypes",
-            name: "Product Type",
-            queryId: 'product_type',
-            state: selectedProductTypes,
-            stateSetter: setSelectedProductTypes
-        }
-    ], [selectedBrands, selectedProductTypes]);
-
-    function buildProductFilters(filtersList: FilterList[]): string {
+    function buildProductFilters(filters: Filters): string {
         const queryParts: string[] = [];
-        filtersList.forEach((filterList) => {
-            const selectedFilteredItems = Object.entries(filterList.state)
+        Object.keys(filters).forEach((filterKey) => {
+            const selectedFilter = filters[filterKey];
+            const selectedFilteredItems = Object.entries(selectedFilter.state)
                 .filter(([, checked]) => checked)
-                .map(([option]) => `${filterList.queryId}:"${option}"`);
+                .map(([option]) => `${selectedFilter.graphQLId}:"${option}"`);
             if (selectedFilteredItems.length > 0) queryParts.push(`(${selectedFilteredItems.join(" OR ")})`);
         })
       
@@ -74,18 +191,13 @@ const useWidget = () => {
     }
 
     const handleClearFilters = () => {
-        const thereAreNoActiveFilters = !(sortBy || reverse || filtersList.some(filterList => 
-            Object.keys(filterList.state).some(key => filterList.state[key])
+        const thereAreNoActiveFilters = !(sortBy || reverse || Object.keys(filters).some(filterKey => 
+            Object.keys(filters[filterKey].state).some(key => filters[filterKey].state[key])
         ));
 
         if(thereAreNoActiveFilters) return;
         
-        filtersList.forEach(filterList => {
-            filterList.stateSetter(current => {
-                Object.keys(current).forEach((key: string) => current[key] = false);
-                return {...current};
-            });
-        })
+        dispatch({type: "CLEAR_FILTER"})
         setSortBy(undefined);
         setReverse(false);
     }
@@ -93,19 +205,21 @@ const useWidget = () => {
     const fetchProducts = useCallback(
         async (options: { append?: boolean } = {}) => {
             const { append = false } = options;
-            
+
+            if(append && (loading || loadingMoreProducts)) return;
+
             abortController.current?.abort();
             abortController.current = new AbortController();
             const signal = abortController.current.signal;
 
             // If appending but no next page or currently loading, return early
-            if (append && (!hasNextPage || loading)) return;
-            
-            if(append) setLoadingLoadingMoreProducts(true);
-            setLoading(true);
+            if (append && !hasNextPage) return;
+
+            if(!initialllyLoadedRef.current || !append) setLoading(true);
+            else if(append) setLoadingLoadingMoreProducts(true);
 
             try {
-                const searchQuery = buildProductFilters(filtersList);
+                const searchQuery = buildProductFilters(filters);
 
                 const variables = {
                     first: PAGE_SIZE,
@@ -133,12 +247,6 @@ const useWidget = () => {
                 setHasNextPage(data.products.pageInfo.hasNextPage);
                 setError(false);
                 initialllyLoadedRef.current = true;
-
-                const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-        
-                if (scrollTop + clientHeight >= scrollHeight - SCROLL_FETCH_THRESHOLD && data.products.pageInfo.hasNextPage) {
-                    fetchProducts({ append: true });
-                }
             } catch (error) {
                 if (error instanceof Error && error.name !== "AbortError") {
                     setError(true);
@@ -149,7 +257,7 @@ const useWidget = () => {
                 setLoadingLoadingMoreProducts(false);
             }
         },
-        [cursor, hasNextPage, loading, sortBy, reverse, filtersList]
+        [cursor, hasNextPage, loading, sortBy, reverse, filters, loadingMoreProducts]
     );
 
     useEffect(() => {
@@ -160,7 +268,7 @@ const useWidget = () => {
         };
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedProductTypes, selectedBrands, sortBy, reverse]);
+    }, [filters, sortBy, reverse]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -178,48 +286,6 @@ const useWidget = () => {
         };
     }, [fetchProducts]);
 
-    useEffect(() => {
-        // Extract brands and product types from html script tag
-        const loadFiltersList = () => {
-            const scriptElement = document.getElementById('frenzy-data') as HTMLScriptElement;
-    
-            const isJSON = (string: string): boolean => {
-                try {
-                    if(JSON.parse(string)) return true;
-                    else return false;
-                } catch {
-                    return false;
-                }
-            };
-    
-            const extractDataFromScriptElement = (scriptElement: HTMLScriptElement) => {
-                if(!scriptElement.textContent) return {};
-                if(!isJSON(scriptElement.textContent)) return {};
-    
-                return JSON.parse(scriptElement.textContent);
-            }
-    
-            if(scriptElement) {
-                const data = extractDataFromScriptElement(scriptElement);
-
-                Object.keys(data).forEach((key:string) => {
-                    const filterList = filtersList.find(filterList => filterList.id === key);
-
-                    if(filterList) {
-                        const valuesArray:string[] = data[key];
-                        const newFilterList: Record<string, boolean> = {};
-                        valuesArray.forEach(value => newFilterList[value] = false);
-                        filterList.stateSetter(newFilterList);
-                    };
-                });
-            };
-        };
-
-        loadFiltersList();
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
     return {
         products,
         loading,
@@ -231,9 +297,10 @@ const useWidget = () => {
         availableCurrencySymbols,
         handleClearFilters,
         error,
-        filtersList,
+        filters,
         loadingMoreProducts,
-        initialllyLoadedRef
+        initialllyLoadedRef,
+        dispatch
     };
 };
 

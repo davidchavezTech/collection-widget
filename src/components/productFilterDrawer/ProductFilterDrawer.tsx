@@ -2,14 +2,14 @@ import React, { type Dispatch, type RefObject, type SetStateAction } from "react
 
 import type { ProductFilterDrawerProps } from "../productFilter/ProductFilter";
 import { createPortal } from "react-dom";
-import type { FilterList, SortBy } from "../../types/shopify";
+import type { Filters, SortBy } from "../../types/shopify";
 import DownSVG from "../svg/DownArrow";
 
 interface Props extends ProductFilterDrawerProps {
     isDrawerOpen: boolean;
     closeDrawer: () => void;
     drawerRef: RefObject<HTMLDivElement | null>;
-    filtersList: FilterList[];
+    filters: Filters;
     selectedFilter: string
     setSelectedFilter: Dispatch<SetStateAction<string>>
     sortBy: SortBy;
@@ -22,21 +22,19 @@ const ProductFilterDrawer = ({
     isDrawerOpen,
     closeDrawer,
     drawerRef,
-    filtersList,
+    filters,
     selectedFilter,
     setSelectedFilter,
     sortBy,
     reverse,
     handlePriceFilter,
-    handleClearFilters
+    handleClearFilters,
+    dispatch
 }: Props) => {
     
 
-    const handleSelectedFilter = (stateSetter: Dispatch<SetStateAction<Record<string, boolean>>>, selection: string) => {
-        stateSetter(current => ({
-            ...current,
-            [selection]: !current[selection],
-          }))
+    const handleSelectedFilter = (filterName: string, selection: string) => {
+        dispatch({type: "TOGGLE_FILTER", payload: {filterName, key: selection}})
     };
 
     const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -80,23 +78,23 @@ const ProductFilterDrawer = ({
                         {/* Filters list */}
                         
                             {
-                                filtersList.map((filterList) => (
-                                    <div className="tw:px-4 tw:mb-2" key={filterList.name}>
+                                Object.entries(filters).map(([filterName,filterList]) => (
+                                    <div className="tw:px-4 tw:mb-2" key={filterList.filterName}>
                                         <h3
                                             className="tw:flex tw:justify-between tw:text-base tw:font-medium tw:mb-2 tw:border-b tw:border-gray-300 tw:py-3 tw:pt-0 tw:cursor-pointer"
                                             onClick={() =>
                                                 setSelectedFilter(
-                                                    selectedFilter === filterList.name ? '' : filterList.name
+                                                    selectedFilter === filterList.filterName ? '' : filterList.filterName
                                                 )
                                             }
                                             // style={{fontSize: 18}}
                                         >
-                                            {filterList.name}
-                                            <DownSVG width={15} className={`tw:mr-4 tw:transform tw:transition-transform tw:duration-300 ${selectedFilter === filterList.name ? 'tw:rotate-180' : 'tw:rotate-0'}`} />
+                                            {filterList.filterName}
+                                            <DownSVG width={15} className={`tw:mr-4 tw:transform tw:transition-transform tw:duration-300 ${selectedFilter === filterList.filterName ? 'tw:rotate-180' : 'tw:rotate-0'}`} />
                                         </h3>
                                         <div
                                             className={`tw:transition-all tw:duration-600 tw:ease-in-out tw:overflow-hidden ${
-                                            selectedFilter === filterList.name ? "tw:max-h-96 tw:opacity-100" : "tw:max-h-0 tw:opacity-0"
+                                            selectedFilter === filterList.filterName ? "tw:max-h-96 tw:opacity-100" : "tw:max-h-0 tw:opacity-0"
                                             }`}
                                         >
                                             <div className="tw:space-y-2 tw:py-4">
@@ -108,7 +106,7 @@ const ProductFilterDrawer = ({
                                                         <input
                                                             type="checkbox"
                                                             checked={filterList.state[optionName]}
-                                                            onChange={() => handleSelectedFilter(filterList.stateSetter, optionName)}
+                                                            onChange={() => handleSelectedFilter(filterName, optionName)}
                                                         />
                                                         <span>{optionName}</span>
                                                     </label>

@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import ProductFilterBar from "../ProductFilterBar/ProductFilterBar";
 import ProductFilterDrawer from "../productFilterDrawer/ProductFilterDrawer";
-import type { FilterList, SortBy } from "../../types/shopify";
+import type { Filters, FiltersAction, SortBy } from "../../types/shopify";
 import useProductFilterDrawer from "./useProductFilterDrawer";
 
 type SetSortBy = Dispatch<SetStateAction<SortBy>>;
@@ -14,11 +14,13 @@ export interface ProductFilterBarProps {
     setReverse: SetReverse
     sortBy: SortBy
     reverse: Reverse
-    handleClearFilters: HandleClearFilters
+    handleClearFilters: HandleClearFilters,
+    filters: Filters
 }
 
 export interface ProductFilterDrawerProps {
-    filtersList: FilterList[]
+    filters: Filters,
+    dispatch: Dispatch<FiltersAction>
 }
 
 interface ProductFilter extends ProductFilterBarProps, ProductFilterDrawerProps {}
@@ -29,7 +31,8 @@ const ProductFilter = ({
     sortBy,
     reverse,
     handleClearFilters,
-    filtersList
+    filters,
+    dispatch
 }: ProductFilter) => {
 
     const handlePriceFilter = (highest: boolean) => {
@@ -59,13 +62,14 @@ const ProductFilter = ({
                     isDrawerOpen,
                     closeDrawer,
                     drawerRef,
-                    filtersList,
+                    filters,
                     selectedFilter,
                     setSelectedFilter,
                     sortBy,
                     reverse,
                     handlePriceFilter,
                     handleClearFilters,
+                    dispatch
                 }}
             />
             <ProductFilterBar
@@ -78,7 +82,7 @@ const ProductFilter = ({
                     openDrawer,
                     clearFiltersButtonRef,
                     setSelectedFilter,
-                    filtersList,
+                    filters,
                     handlePriceFilter
                 }}
             />

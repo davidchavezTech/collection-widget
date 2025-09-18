@@ -12,22 +12,24 @@ const Widget = () => {
         sortBy,
         reverse,
         availableCurrencySymbols,
-        filtersList,
+        filters,
         handleClearFilters,
         error,
         loadingMoreProducts,
-        initialllyLoadedRef
+        initialllyLoadedRef,
+        dispatch
     } = useWidget();
 
     return (
         <div className="tw:max-w-[1600px] tw:mx-auto">
-            {filtersList.length ? <ProductFilter {...{
+            {Object.keys(filters).length ? <ProductFilter {...{
                 setSortBy,
                 setReverse,
                 sortBy,
                 reverse,
                 handleClearFilters,
-                filtersList
+                filters,
+                dispatch
             }} /> : ''}
             
             <ProductGrid

@@ -1,5 +1,3 @@
-import type { Dispatch, SetStateAction } from "react";
-
 export interface Product {
     id: string;
     title: string;
@@ -58,11 +56,12 @@ export interface CurrencySymbolObject {
         symbol: string
     }
 }
+export type Filter = {
+    filterName: string,
+    graphQLId: string,
+    state: Record<string, boolean>,
+}
+export type Filters = Record<string, Filter>;
 
-export type FilterList = {
-    id: string;
-    name: string;
-    queryId: string;
-    state: Record<string, boolean>;
-    stateSetter: Dispatch<SetStateAction<Record<string, boolean>>>;
-};
+export type FiltersAction =
+ { type: "TOGGLE_FILTER" | "CLEAR_FILTER"; payload?: { filterName: string, key: string } | undefined }

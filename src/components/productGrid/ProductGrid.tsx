@@ -1,7 +1,7 @@
 import ProductCard from "../productCard/ProductCard";
 import type { Product, CurrencySymbolObject } from "../../types/shopify";
 import ProductCardSkeleton from "../productCard/ProductCardSkeleton";
-import type { RefObject } from "react";
+import { type RefObject } from "react";
 
 interface ProductGridProps {
     products: Product[];
@@ -20,6 +20,7 @@ export default function ProductGrid({
     loadingMoreProducts,
     initialllyLoadedRef
 }: ProductGridProps) {
+    
     return (
         <div className="tw:w-full">
             {
@@ -32,17 +33,6 @@ export default function ProductGrid({
                 
                 {products.map((product) => (
                     <div key={product.id} className="tw:relative">
-                        {/* Skeleton */}
-                        <div
-                            className={`tw:absolute tw:inset-0 tw:transition-opacity tw:duration-500 ${
-                                loading
-                                    ? "tw:opacity-100"
-                                    : "tw:opacity-0 pointer-events-none"
-                            }`}
-                        >
-                            <ProductCardSkeleton />
-                        </div>
-
                         {/* Product */}
                         <div
                             className={`tw:transition-opacity tw:duration-500 ${
@@ -60,15 +50,13 @@ export default function ProductGrid({
                 ))}
 
                 {/* Extra skeletons if products array is empty while loading */}
-                {loading &&
-                    products.length === 0 &&
-                    Array.from({ length: 8 }).map((_, i) => (
+                {loadingMoreProducts &&
+                    Array.from({ length: 20 }).map((_, i) => (
                         <ProductCardSkeleton key={`skeleton-${i}`} />
                     ))
                 }
 
             </div>
-            {loadingMoreProducts && <p className="tw:text-center tw:my-12">...Loading more products</p>}
         </div>
     );
 }

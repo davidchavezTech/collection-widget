@@ -1,6 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { ProductFilterBarProps } from "../productFilter/ProductFilter";
-import type { FilterList } from "../../types/shopify";
 import DownSVG from "../svg/DownArrow";
 import FilterSVG from "../svg/FilterSVG";
 
@@ -8,7 +7,6 @@ interface Props extends ProductFilterBarProps {
     openDrawer: () => void;
     clearFiltersButtonRef: RefObject<HTMLButtonElement | null>;
     setSelectedFilter: Dispatch<SetStateAction<string>>;
-    filtersList: FilterList[];
     handlePriceFilter: (highest: boolean) => void;
 }
 
@@ -19,7 +17,7 @@ const ProductFilterBar = ({
     openDrawer,
     clearFiltersButtonRef,
     setSelectedFilter,
-    filtersList,
+    filters,
     handlePriceFilter
 }: Props) => {
 
@@ -32,15 +30,15 @@ const ProductFilterBar = ({
         <div className="tw:flex tw:justify-end tw:lg:justify-between tw:bg-white tw:text-gray-900 tw:py-4">
             {/* Desktop (lg and up) */}
             <div className="tw:hidden tw:lg:flex tw:gap-8">
-                {filtersList.map((filterList) => (
-                <button
-                    className="tw:flex tw:items-center tw:space-x-2 tw:px-3 tw:py-2 tw:cursor-pointer"
-                    onClick={() => handleFilterButtonClick(filterList.name)}
-                    key={filterList.name}
-                >
-                    <span className="tw:text-sm">{filterList.name}</span>
-                    <DownSVG className="tw:translate-y-[2px]" width={10} />
-                </button>
+                {Object.entries(filters).map(([,filter]) => (
+                    <button
+                        className="tw:flex tw:items-center tw:space-x-2 tw:px-3 tw:py-2 tw:cursor-pointer"
+                        onClick={() => handleFilterButtonClick(filter.filterName)}
+                        key={filter.filterName}
+                    >
+                        <span className="tw:text-sm">{filter.filterName}</span>
+                        <DownSVG className="tw:translate-y-[2px]" width={10} />
+                    </button>
                 ))}
             </div>
             <div className="tw:hidden tw:lg:flex tw:gap-4">

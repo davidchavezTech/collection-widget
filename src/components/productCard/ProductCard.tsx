@@ -5,17 +5,18 @@ import FadeInImage from "./FadeInImage";
 const ProductCard = ({ product, availableCurrencySymbols }: { product: Product, availableCurrencySymbols: CurrencySymbolObject[] }) => {
     const title = product.title;
     const vendor = product.vendor;
-    const mainImage = product.images.edges[0].node;
+    const mainImage = product.images.edges[0]?.node;
     const secondaryImage = product.images.edges[1]?.node;
     const handle = product.handle;
     const currencyCode = product.variants.edges[0].node.priceV2.currencyCode;
     const price = product.variants.edges[0].node.priceV2.amount;
 
-    const currencySymbol = availableCurrencySymbols.find(currencyObject => currencyObject.currency.isoCode === currencyCode)?.currency.symbol + '. ' || currencyCode;
+    const currencySymbol = product.handle === "dummy-handle" ? '' : availableCurrencySymbols.find(currencyObject => currencyObject.currency.isoCode === currencyCode)?.currency.symbol + '. ' || currencyCode;
 
     return (
         <a href={`/products/${handle}`} className="tw:group tw:mb-4">
             <div className="tw:relative tw:aspect-[2/3] tw:overflow-hidden tw:mb-1">
+                <div className="tw:absolute tw:inset-0 tw:bg-stone-300 tw:animate-pulse tw:-z-1" />
                 {mainImage && (
                     <FadeInImage
                         src={`${mainImage.url}&width=400`}
@@ -53,10 +54,11 @@ const ProductCard = ({ product, availableCurrencySymbols }: { product: Product, 
 
             <div className="tw:p-2 tw:text-center">
                 <h3 className="tw:text-sm tw:text-stone-800 tw:uppercase tw:font-semibold">
-                    {vendor}
+                    {vendor || <div className="tw:h-3 tw:w-1/3 tw:mx-auto tw:bg-stone-300 tw:rounded tw:mb-1" />}
                 </h3>
-                <h3 className="tw:text-sm tw:text-stone-800 tw:mb-1">{title}</h3>
+                <h3 className="tw:text-sm tw:text-stone-800 tw:mb-1">{title || <div className="tw:h-4 tw:w-2/3 tw:mx-auto tw:bg-stone-300 tw:rounded" />}</h3>
                 <p className="tw:text-sm tw:text-stone-700">
+                    {!currencySymbol && !price ? <div className="tw:h-3 tw:w-1/4 tw:mx-auto tw:bg-stone-300 tw:rounded" /> : ''}
                     {currencySymbol}
                     {price}
                 </p>
