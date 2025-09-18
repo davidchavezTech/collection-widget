@@ -101,12 +101,13 @@ const ProductFilterDrawer = ({
                                                 {Object.keys(filterList.state).map((optionName) => (
                                                     <label
                                                         key={optionName}
-                                                        className="tw:flex tw:items-center tw:space-x-2 tw:cursor-pointer"
+                                                        className="tw:flex tw:items-center tw:space-x-2 tw:cursor-pointer tw:ml-1"
                                                     >
                                                         <input
                                                             type="checkbox"
                                                             checked={filterList.state[optionName]}
                                                             onChange={() => handleSelectedFilter(filterName, optionName)}
+                                                            onFocus={() => setSelectedFilter(filterList.filterName)}
                                                         />
                                                         <span>{optionName}</span>
                                                     </label>
