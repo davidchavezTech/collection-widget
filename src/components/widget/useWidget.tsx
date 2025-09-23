@@ -12,6 +12,10 @@ import type {
 } from "../../types/shopify";
 import { PRODUCTS_QUERY } from "../../graphQL/queries/products";
 
+interface PushParams {
+    filterName: string, isSelected: boolean, option: string
+}
+
 const PAGE_SIZE = 20;
 const SCROLL_FETCH_THRESHOLD = 300;
 
@@ -47,7 +51,30 @@ const initiateFiltersList = (initialArgs: Filters | undefined): Filters => {
     if(!initialArgs) return {};
     try {
         const isDevMode = import.meta.env.MODE === 'development';
-        if(isDevMode) return initialArgs;
+        if(isDevMode) {
+            const _initialArgs = JSON.parse(JSON.stringify(initialArgs));
+
+            const params = new URLSearchParams(window.location.search);
+            const currentParamsArr: string[] = [];
+
+            for (const [key] of params) {
+                currentParamsArr.push(key)
+            };
+
+            Object.keys(_initialArgs).forEach((key) => { // Iterate through venders and productTYpes
+                const currentFilter = _initialArgs[key];
+                const filterState = currentFilter.state;
+
+                currentParamsArr.forEach((currentParam: string) => {
+                    if(Object.keys(filterState).includes(currentParam)) {
+                        filterState[currentParam] = true;
+                    }
+                });
+            });
+
+            return _initialArgs
+        };
+
     
         const scriptElement = document.getElementById('frenzy-data') as HTMLScriptElement;
     
@@ -112,12 +139,31 @@ function toggleFilter(filter: Filter, key: string): Filter {
 
 const filtersListReducer = (prevState: Filters, action: FiltersAction) => {
     const { type, payload } = action;
+    const pushParams = ({isSelected, option}: PushParams) => {
+        
+        const params = new URLSearchParams(window.location.search);
+
+        if(isSelected) params.set(option, "open");
+        else params.delete(option);
+
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({}, "", newUrl);
+    }
 
     switch (type) {
         case "TOGGLE_FILTER": {
             if(!payload) return prevState;
             const filter = prevState[payload.filterName];
             if (!filter) return prevState;
+            const { filterName } = payload;
+            const isSelected = !filter.state[payload.key];
+            const option = payload.key;
+
+            pushParams({
+                filterName,
+                isSelected,
+                option
+            });
 
             return {
                 ...prevState,
@@ -125,6 +171,7 @@ const filtersListReducer = (prevState: Filters, action: FiltersAction) => {
             };
         };
         case "CLEAR_FILTER": {
+            
             const cleared = Object.fromEntries(
                 Object.entries(prevState).map(([filterName, filter]) => [
                     filterName,
